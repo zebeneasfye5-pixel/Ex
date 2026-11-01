@@ -1,0 +1,6 @@
+{
+  "name": "NexusGlobal Alliance | ዓለም አቀፍ የንግድ ህብረት እና የተረጋገጠ የአፊሊየት መድረክ",
+  "description": "በአለም አቀፍ ደረጃ የታመነ፣ በእውነተኛ የምርት ሽያጭ እና በአፊሊየት ኮሚሽን ላይ የተመሰረተ ዓለም አቀፍ የዲጂታል ንግድ ህብረት እና የክፍያ መድረክ።",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
