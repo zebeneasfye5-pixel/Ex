@@ -7,7 +7,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
-  const { language, t } = useApp();
+  const { language, t, setAdminConsoleOpen } = useApp();
 
   return (
     <footer className="bg-slate-950 border-t border-slate-800 text-slate-400 text-xs">
@@ -63,6 +63,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <li>
                 <button onClick={() => onNavigate('compliance')} className="hover:text-white transition-colors">
                   {t.navCompliance}
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setAdminConsoleOpen(true)} className="text-amber-400 hover:text-amber-300 font-medium transition-colors">
+                  {language === 'am' ? 'የአስተዳዳሪ ማዕከል (Admin)' : 'Admin Console'}
                 </button>
               </li>
             </ul>

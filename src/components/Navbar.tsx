@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { LANGUAGES_CONFIG } from '../data/translations';
 import { Language } from '../types';
-import { Globe, Wallet, ChevronDown, PlusCircle, ArrowUpRight } from 'lucide-react';
+import { Globe, Wallet, ChevronDown, PlusCircle, ArrowUpRight, Shield } from 'lucide-react';
 
 interface NavbarProps {
   onNavigate: (sectionId: string) => void;
@@ -17,7 +17,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
     walletBalance,
     currentTierInfo,
     setMerchantModalOpen,
-    setWithdrawModalOpen
+    setWithdrawModalOpen,
+    setAdminConsoleOpen
   } = useApp();
 
   const [langMenuOpen, setLangMenuOpen] = useState(false);
@@ -123,6 +124,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
               </div>
             )}
           </div>
+
+          {/* Admin / Owner Console Trigger */}
+          <button
+            onClick={() => setAdminConsoleOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-amber-300 bg-amber-950/40 border border-amber-800/80 rounded-lg hover:bg-amber-900/40 transition-colors"
+            title="Owner & Admin Control Console"
+          >
+            <Shield className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">{language === 'am' ? 'አስተዳዳሪ' : 'Admin'}</span>
+          </button>
 
           {/* List Product Button */}
           <button

@@ -33,6 +33,7 @@ export interface Product {
   sku: string;
   descriptionKey: string;
   featuresKeys: string[];
+  isActive?: boolean;
 }
 
 export interface CustomerOrder {
@@ -44,6 +45,7 @@ export interface CustomerOrder {
   amount: number;
   paymentMethod: string;
   commissionEarned: number;
+  platformFeeEarned: number; // Owner's cut
   affiliateRef: string;
   date: string;
   status: 'paid' | 'delivered';
@@ -83,6 +85,14 @@ export interface MerchantProductSubmission {
   vendorName: string;
   vendorEmail: string;
   fulfillmentUrl: string;
-  status: 'under_review' | 'approved';
+  status: 'under_review' | 'approved' | 'rejected';
   dateSubmitted: string;
+}
+
+export interface PlatformOwnerStats {
+  platformFeeRate: number; // percentage (e.g. 10%)
+  totalOwnerNetProfit: number; // in USD
+  totalGMV: number;
+  totalAffiliatesPaid: number;
+  ownerPayoutAccount: string;
 }

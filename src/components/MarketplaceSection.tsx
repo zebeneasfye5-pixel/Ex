@@ -9,6 +9,7 @@ export const MarketplaceSection: React.FC = () => {
     t,
     language,
     currentTierInfo,
+    products,
     setSelectedProductForCheckout,
     setSelectedProductForAffiliate
   } = useApp();
@@ -16,8 +17,8 @@ export const MarketplaceSection: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
   const filteredProducts = activeCategory === 'all'
-    ? PRODUCTS_CATALOG
-    : PRODUCTS_CATALOG.filter((p) => p.category === activeCategory);
+    ? products.filter((p) => p.isActive !== false)
+    : products.filter((p) => p.isActive !== false && p.category === activeCategory);
 
   return (
     <section id="products" className="py-16 bg-slate-900/50 border-b border-slate-800/80">

@@ -12,6 +12,7 @@ import { CustomerCheckoutModal } from './components/CustomerCheckoutModal';
 import { AffiliateDistributionModal } from './components/AffiliateDistributionModal';
 import { WithdrawModal } from './components/WithdrawModal';
 import { MerchantModal } from './components/MerchantModal';
+import { AdminConsole } from './components/AdminConsole';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -77,6 +78,7 @@ const AppContent: React.FC = () => {
       <AffiliateDistributionModal />
       <WithdrawModal />
       <MerchantModal />
+      <AdminConsole />
 
     </div>
   );

@@ -6,7 +6,8 @@ import {
   CustomerOrder,
   WithdrawalRequest,
   MerchantProductSubmission,
-  PartnerTierInfo
+  PartnerTierInfo,
+  PlatformOwnerStats
 } from '../types';
 import { PARTNER_TIERS, PRODUCTS_CATALOG } from '../data/catalog';
 import { TRANSLATIONS, LANGUAGES_CONFIG } from '../data/translations';
@@ -19,6 +20,7 @@ interface AppContextType {
   userTier: PartnerTierLevel;
   setUserTier: (tier: PartnerTierLevel) => void;
   currentTierInfo: PartnerTierInfo;
+  products: Product[];
   walletBalance: number;
   pendingEscrow: number;
   lifetimeEarnings: number;
@@ -26,6 +28,9 @@ interface AppContextType {
   customerOrders: CustomerOrder[];
   withdrawals: WithdrawalRequest[];
   merchantSubmissions: MerchantProductSubmission[];
+  ownerStats: PlatformOwnerStats;
+  adminConsoleOpen: boolean;
+  setAdminConsoleOpen: (open: boolean) => void;
   selectedProductForCheckout: Product | null;
   setSelectedProductForCheckout: (prod: Product | null) => void;
   selectedProductForAffiliate: Product | null;
@@ -56,6 +61,13 @@ interface AppContextType {
     vendorEmail: string,
     fulfillmentUrl: string
   ) => void;
+  // Admin Methods for Website Owner
+  addProduct: (newProd: Product) => void;
+  updateProduct: (id: string, updates: Partial<Product>) => void;
+  toggleProductStatus: (id: string) => void;
+  approveMerchantSubmission: (submissionId: string) => void;
+  approveWithdrawal: (withdrawalId: string) => void;
+  updateOwnerSettings: (feeRate: number, payoutAccount: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -70,6 +82,7 @@ const INITIAL_ORDERS: CustomerOrder[] = [
     amount: 349.00,
     paymentMethod: 'International Card (Stripe)',
     commissionEarned: 139.60,
+    platformFeeEarned: 34.90,
     affiliateRef: 'NEXUS-7849',
     date: '2026-11-01 10:24',
     status: 'paid',
@@ -84,6 +97,7 @@ const INITIAL_ORDERS: CustomerOrder[] = [
     amount: 289.00,
     paymentMethod: 'CBE Birr / Telebirr',
     commissionEarned: 72.25,
+    platformFeeEarned: 28.90,
     affiliateRef: 'NEXUS-7849',
     date: '2026-10-31 16:40',
     status: 'delivered',
@@ -98,6 +112,7 @@ const INITIAL_ORDERS: CustomerOrder[] = [
     amount: 149.00,
     paymentMethod: 'Tether USDT (TRC-20)',
     commissionEarned: 67.05,
+    platformFeeEarned: 14.90,
     affiliateRef: 'NEXUS-7849',
     date: '2026-10-30 20:15',
     status: 'paid',
@@ -130,6 +145,21 @@ const INITIAL_WITHDRAWALS: WithdrawalRequest[] = [
   }
 ];
 
+const INITIAL_SUBMISSIONS: MerchantProductSubmission[] = [
+  {
+    id: 'SUB-101',
+    title: 'Fintech Gateway Cross-Border Settlement API',
+    category: 'Enterprise SaaS',
+    price: 499,
+    commissionRate: 30,
+    vendorName: 'Apex Pay Solutions LLC',
+    vendorEmail: 'partners@apexpay.io',
+    fulfillmentUrl: 'https://apexpay.io/api-keys',
+    status: 'under_review',
+    dateSubmitted: '2026-11-01'
+  }
+];
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('nexus_lang');
@@ -142,7 +172,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const langConfig = LANGUAGES_CONFIG.find((l) => l.code === language) || LANGUAGES_CONFIG[0];
   const t = TRANSLATIONS[language] || TRANSLATIONS['en'];
 
-  const [userTier, setUserTier] = useState<PartnerTierLevel>(3); // Tier III Regional Director
+  const [userTier, setUserTier] = useState<PartnerTierLevel>(3);
+
+  // Live products in state
+  const [products, setProducts] = useState<Product[]>(() => {
+    const saved = localStorage.getItem('nexus_products_catalog');
+    return saved ? JSON.parse(saved) : PRODUCTS_CATALOG;
+  });
 
   const [walletBalance, setWalletBalance] = useState<number>(() => {
     const saved = localStorage.getItem('nexus_wallet_bal');
@@ -176,9 +212,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [merchantSubmissions, setMerchantSubmissions] = useState<MerchantProductSubmission[]>(() => {
     const saved = localStorage.getItem('nexus_merchant_subs');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : INITIAL_SUBMISSIONS;
   });
 
+  // Owner Revenue & Platform Management Stats
+  const [ownerStats, setOwnerStats] = useState<PlatformOwnerStats>(() => {
+    const saved = localStorage.getItem('nexus_owner_stats');
+    if (saved) return JSON.parse(saved);
+    return {
+      platformFeeRate: 10, // 10% platform fee on all GMV
+      totalOwnerNetProfit: 5420.00, // 10% of $54,200 GMV
+      totalGMV: 54200.00,
+      totalAffiliatesPaid: 18920.00,
+      ownerPayoutAccount: 'CBE Account 100028472910 (Zebene Asfaw) / USDT: 0x98a...21'
+    };
+  });
+
+  const [adminConsoleOpen, setAdminConsoleOpen] = useState<boolean>(false);
   const [selectedProductForCheckout, setSelectedProductForCheckout] = useState<Product | null>(null);
   const [selectedProductForAffiliate, setSelectedProductForAffiliate] = useState<Product | null>(null);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState<boolean>(false);
@@ -186,6 +236,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   // Sync state to localStorage
+  useEffect(() => {
+    localStorage.setItem('nexus_products_catalog', JSON.stringify(products));
+  }, [products]);
+
   useEffect(() => {
     localStorage.setItem('nexus_wallet_bal', walletBalance.toString());
   }, [walletBalance]);
@@ -214,10 +268,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('nexus_merchant_subs', JSON.stringify(merchantSubmissions));
   }, [merchantSubmissions]);
 
+  useEffect(() => {
+    localStorage.setItem('nexus_owner_stats', JSON.stringify(ownerStats));
+  }, [ownerStats]);
+
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem('nexus_lang', lang);
-    // Set document direction for Arabic
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = lang;
   };
@@ -231,19 +288,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clearNotification = () => setNotification(null);
 
-  // Real Customer Purchase Execution
+  // Real Customer Purchase Execution (Generates commission for partner AND platform take-rate for the owner!)
   const placeCustomerOrder = (
     productId: string,
     customerName: string,
     customerEmail: string,
     paymentMethod: string
   ): CustomerOrder | null => {
-    const product = PRODUCTS_CATALOG.find((p) => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     if (!product) return null;
 
-    // Commission earned based on active partner tier direct commission rate
     const tierRate = currentTierInfo.directCommission;
     const commissionEarned = Number(((product.price * tierRate) / 100).toFixed(2));
+    
+    // Platform Owner Take-Rate (e.g. 10% of gross order price)
+    const platformFeeEarned = Number(((product.price * ownerStats.platformFeeRate) / 100).toFixed(2));
 
     const uniqueOrderNum = Math.floor(10000 + Math.random() * 90000);
     const trackingOrKey = product.category === 'saas'
@@ -261,6 +320,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount: product.price,
       paymentMethod,
       commissionEarned,
+      platformFeeEarned,
       affiliateRef: 'NEXUS-7849',
       date: new Date().toISOString().replace('T', ' ').substring(0, 16),
       status: 'paid',
@@ -272,8 +332,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLifetimeEarnings((prev) => Number((prev + commissionEarned).toFixed(2)));
     setTotalReferredVolume((prev) => Number((prev + product.price).toFixed(2)));
 
+    // Update Owner Stats automatically
+    setOwnerStats((prev) => ({
+      ...prev,
+      totalGMV: Number((prev.totalGMV + product.price).toFixed(2)),
+      totalOwnerNetProfit: Number((prev.totalOwnerNetProfit + platformFeeEarned).toFixed(2))
+    }));
+
     setNotification({
-      message: `${newOrder.customerName} ordered ${product.title}! +$${commissionEarned} partner commission settled.`,
+      message: `${newOrder.customerName} ordered ${product.title}! +$${commissionEarned} partner commission settled. +$${platformFeeEarned} owner fee recorded.`,
       type: 'success'
     });
 
@@ -347,6 +414,100 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  // --- ADMIN / OWNER METHODS ---
+
+  const addProduct = (newProd: Product) => {
+    setProducts((prev) => [newProd, ...prev]);
+    setNotification({
+      message: `New product "${newProd.title}" added to the live marketplace!`,
+      type: 'success'
+    });
+  };
+
+  const updateProduct = (id: string, updates: Partial<Product>) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+    );
+    setNotification({
+      message: `Product updated successfully.`,
+      type: 'success'
+    });
+  };
+
+  const toggleProductStatus = (id: string) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, isActive: p.isActive === false ? true : false } : p))
+    );
+  };
+
+  const approveMerchantSubmission = (submissionId: string) => {
+    const sub = merchantSubmissions.find((s) => s.id === submissionId);
+    if (!sub) return;
+
+    // Convert approved submission into active product
+    const approvedProduct: Product = {
+      id: `prod-merchant-${Date.now()}`,
+      title: sub.title,
+      category: sub.category.toLowerCase().includes('saas') ? 'saas' : 'b2b',
+      categoryLabelKey: 'filterSaas',
+      price: sub.price,
+      commissionRate: sub.commissionRate,
+      commissionAmount: Number(((sub.price * sub.commissionRate) / 100).toFixed(2)),
+      image: '/src/assets/images/product_saas_platform_1793571721607.jpg',
+      salesCount: 0,
+      rating: 5.0,
+      reviewsCount: 1,
+      vendor: sub.vendorName,
+      vendorCountry: 'Verified International Vendor',
+      sku: `VEN-${Math.floor(1000 + Math.random() * 9000)}`,
+      descriptionKey: `Vetted vendor solution submitted by ${sub.vendorName}. Instant digital delivery access.`,
+      featuresKeys: [
+        'Vetted vendor fulfillment integration',
+        'Direct automated license key generation',
+        'Guaranteed escrow payment backing'
+      ],
+      isActive: true
+    };
+
+    setProducts((prev) => [approvedProduct, ...prev]);
+    setMerchantSubmissions((prev) =>
+      prev.map((s) => (s.id === submissionId ? { ...s, status: 'approved' } : s))
+    );
+
+    // Charge a $199 merchant listing fee to owner's profit
+    setOwnerStats((prev) => ({
+      ...prev,
+      totalOwnerNetProfit: Number((prev.totalOwnerNetProfit + 199.00).toFixed(2))
+    }));
+
+    setNotification({
+      message: `Merchant product "${sub.title}" approved & published to Marketplace! +$199 listing fee credited to Owner.`,
+      type: 'success'
+    });
+  };
+
+  const approveWithdrawal = (withdrawalId: string) => {
+    setWithdrawals((prev) =>
+      prev.map((w) => (w.id === withdrawalId ? { ...w, status: 'completed' } : w))
+    );
+    setNotification({
+      message: `Withdrawal ${withdrawalId} confirmed as sent.`,
+      type: 'success'
+    });
+  };
+
+  const updateOwnerSettings = (feeRate: number, payoutAccount: string) => {
+    setOwnerStats((prev) => ({
+      ...prev,
+      platformFeeRate: feeRate,
+      ownerPayoutAccount: payoutAccount
+    }));
+    setNotification({
+      message: `Platform owner settings updated. Fee rate set to ${feeRate}%.`,
+      type: 'success'
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -357,6 +518,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         userTier,
         setUserTier,
         currentTierInfo,
+        products,
         walletBalance,
         pendingEscrow,
         lifetimeEarnings,
@@ -364,6 +526,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         customerOrders,
         withdrawals,
         merchantSubmissions,
+        ownerStats,
+        adminConsoleOpen,
+        setAdminConsoleOpen,
         selectedProductForCheckout,
         setSelectedProductForCheckout,
         selectedProductForAffiliate,
@@ -376,7 +541,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         clearNotification,
         placeCustomerOrder,
         requestWithdrawal,
-        submitMerchantProduct
+        submitMerchantProduct,
+        addProduct,
+        updateProduct,
+        toggleProductStatus,
+        approveMerchantSubmission,
+        approveWithdrawal,
+        updateOwnerSettings
       }}
     >
       {children}
