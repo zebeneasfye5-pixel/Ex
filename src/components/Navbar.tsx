@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { LANGUAGES_CONFIG } from '../data/translations';
 import { Language } from '../types';
 import { Globe, Wallet, ChevronDown, PlusCircle, ArrowUpRight, Shield } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavbarProps {
   onNavigate: (sectionId: string) => void;
@@ -124,6 +125,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
               </div>
             )}
           </div>
+
+          {/* In-App PWA Install Button */}
+          <PWAInstallButton />
 
           {/* Admin / Owner Console Trigger */}
           <button

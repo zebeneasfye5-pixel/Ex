@@ -13,6 +13,7 @@ import { AffiliateDistributionModal } from './components/AffiliateDistributionMo
 import { WithdrawModal } from './components/WithdrawModal';
 import { MerchantModal } from './components/MerchantModal';
 import { AdminConsole } from './components/AdminConsole';
+import { PWAInstallBanner } from './components/PWAInstallBanner';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -79,6 +80,8 @@ const AppContent: React.FC = () => {
       <WithdrawModal />
       <MerchantModal />
       <AdminConsole />
+      {/* In-App PWA Install Banner */}
+      <PWAInstallBanner />
 
     </div>
   );
