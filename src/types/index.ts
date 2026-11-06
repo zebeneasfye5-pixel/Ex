@@ -43,7 +43,9 @@ export interface CustomerOrder {
   customerName: string;
   customerEmail: string;
   amount: number;
+  currency: string;
   paymentMethod: string;
+  paymentReference?: string;
   commissionEarned: number;
   platformFeeEarned: number; // Owner's cut
   affiliateRef: string;
@@ -95,4 +97,37 @@ export interface PlatformOwnerStats {
   totalGMV: number;
   totalAffiliatesPaid: number;
   ownerPayoutAccount: string;
+  cbeAccount: string;
+  telebirrPhone: string;
+  usdtTrc20Address: string;
+  wiseIban: string;
+  supportPhone: string;
+  supportTelegram: string;
+}
+
+export interface FreelanceContract {
+  id: string;
+  title: string;
+  clientName: string;
+  clientCountry: string;
+  budget: number;
+  duration: string;
+  scope: string;
+  category: 'web_cloud' | 'ai_automation' | 'ecommerce_export' | 'digital_marketing';
+  applicationsCount: number;
+  escrowSecured: boolean;
+  status: 'open' | 'in_progress' | 'completed';
+}
+
+export interface LeadSubmission {
+  id: string;
+  fullName: string;
+  organization: string;
+  email: string;
+  phone: string;
+  serviceNeeded: string;
+  estimatedBudget: string;
+  notes: string;
+  date: string;
+  status: 'new' | 'contacted' | 'contract_issued';
 }

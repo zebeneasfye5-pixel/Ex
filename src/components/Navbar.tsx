@@ -61,6 +61,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate }) => {
             {t.navProducts}
           </button>
           <button
+            onClick={() => onNavigate('contracts-section')}
+            className="hover:text-amber-400 transition-colors whitespace-nowrap shrink-0 focus:outline-none font-semibold text-amber-300/90"
+          >
+            {language === 'am' ? 'B2B ውሎች & ስራዎች' : 'B2B Contracts'}
+          </button>
+          <button
             onClick={() => onNavigate('tiers')}
             className="hover:text-white transition-colors whitespace-nowrap shrink-0 focus:outline-none"
           >

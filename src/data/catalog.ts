@@ -108,7 +108,8 @@ export const PRODUCTS_CATALOG: Product[] = [
       'Automated revenue forecasting & customer churn detection',
       '30-Day corporate enterprise pilot with 24.8% conversion',
       'Instant digital API license key issued upon purchase'
-    ]
+    ],
+    isActive: true
   },
   {
     id: 'prod-hardware-aura',
@@ -131,7 +132,8 @@ export const PRODUCTS_CATALOG: Product[] = [
       'Direct-to-door express DHL courier delivery in 3 days',
       'Full 2-year international warranty & manufacturer guarantee',
       'Instant tracking number issued on checkout'
-    ]
+    ],
+    isActive: true
   },
   {
     id: 'prod-digital-blueprint',
@@ -154,7 +156,8 @@ export const PRODUCTS_CATALOG: Product[] = [
       'Instant digital download link & lifetime updates',
       'Direct factory contacts with negotiated wholesale pricing',
       'Zero customs friction documentation templates'
-    ]
+    ],
+    isActive: true
   },
   {
     id: 'prod-b2b-cloud',
@@ -177,6 +180,97 @@ export const PRODUCTS_CATALOG: Product[] = [
       'Lump-sum $480.00 commission released upon contract closing',
       'Executed by certified Senior Cloud Infrastructure Architects',
       'Institutional SLA and 14-day escrow settlement'
-    ]
+    ],
+    isActive: true
+  },
+  {
+    id: 'prod-b2b-ai-automation',
+    title: 'OmniAI Enterprise Sales & Workflow Automation Suite',
+    category: 'b2b',
+    categoryLabelKey: 'filterB2B',
+    price: 1850,
+    commissionRate: 25,
+    commissionAmount: 462.50,
+    isRecurring: false,
+    image: '/src/assets/images/product_saas_platform_1793571721607.jpg',
+    salesCount: 312,
+    rating: 4.9,
+    reviewsCount: 94,
+    vendor: 'OmniGen Systems LLC',
+    vendorCountry: 'United States / UAE',
+    sku: 'OMNI-AI-WORKFLOW',
+    descriptionKey: 'Turnkey enterprise AI automation system for customer inquiries, lead qualification, and cross-border settlement processing.',
+    featuresKeys: [
+      '$462.50 instant commission credited to referring sales partner',
+      'Custom ERP/CRM deployment completed in under 7 business days',
+      'Guaranteed 3x lead handling efficiency boost'
+    ],
+    isActive: true
+  },
+  {
+    id: 'prod-b2b-export-brokerage',
+    title: 'Global Export & Commodity Sourcing Mandate',
+    category: 'b2b',
+    categoryLabelKey: 'filterB2B',
+    price: 3500,
+    commissionRate: 15,
+    commissionAmount: 525.00,
+    isRecurring: false,
+    image: '/src/assets/images/hero_global_syndicate_1793571721496.jpg',
+    salesCount: 145,
+    rating: 4.95,
+    reviewsCount: 42,
+    vendor: 'Nexus Trade Consortium',
+    vendorCountry: 'Ethiopia / Netherlands / UAE',
+    sku: 'EXP-COMM-MANDATE',
+    descriptionKey: 'Comprehensive export certification, LC processing, laboratory inspection, and buyer match for agricultural & manufacturing exports.',
+    featuresKeys: [
+      '$525.00 broker referral fee disbursed upon LC letter of credit opening',
+      'Direct connection with institutional international commodity buyers',
+      'Complete legal contract and banking clearance advisory'
+    ],
+    isActive: true
+  }
+];
+
+export const ENTERPRISE_CONTRACTS = [
+  {
+    id: 'CONT-101',
+    title: 'Enterprise Fintech Mobile App & Web Portal Architecture',
+    clientName: 'East Africa Financial Group',
+    clientCountry: 'Ethiopia / Kenya',
+    budget: 6500,
+    duration: '6 Weeks',
+    scope: 'React, Node.js, Telebirr & CBE Birr gateway integration with multi-currency settlement.',
+    category: 'web_cloud',
+    applicationsCount: 8,
+    escrowSecured: true,
+    status: 'open'
+  },
+  {
+    id: 'CONT-102',
+    title: 'Automated AI Customer Service & WhatsApp Order Bot',
+    clientName: 'Nile Logistics & Courier Corp',
+    clientCountry: 'United Arab Emirates / Ethiopia',
+    budget: 3200,
+    duration: '3 Weeks',
+    scope: 'Multi-lingual chatbot handling Amharic, Oromo, English and Arabic orders with auto-dispatch.',
+    category: 'ai_automation',
+    applicationsCount: 12,
+    escrowSecured: true,
+    status: 'open'
+  },
+  {
+    id: 'CONT-103',
+    title: 'Coffee & Agricultural Products Global E-Commerce Export Hub',
+    clientName: 'Abyssinia Specialty Origin Exports',
+    clientCountry: 'Ethiopia / Germany',
+    budget: 8500,
+    duration: '8 Weeks',
+    scope: 'Direct-to-consumer European export web portal with Stripe, Wise, and DHL courier API sync.',
+    category: 'ecommerce_export',
+    applicationsCount: 5,
+    escrowSecured: true,
+    status: 'open'
   }
 ];

@@ -7,9 +7,11 @@ import {
   WithdrawalRequest,
   MerchantProductSubmission,
   PartnerTierInfo,
-  PlatformOwnerStats
+  PlatformOwnerStats,
+  FreelanceContract,
+  LeadSubmission
 } from '../types';
-import { PARTNER_TIERS, PRODUCTS_CATALOG } from '../data/catalog';
+import { PARTNER_TIERS, PRODUCTS_CATALOG, ENTERPRISE_CONTRACTS } from '../data/catalog';
 import { TRANSLATIONS, LANGUAGES_CONFIG } from '../data/translations';
 
 interface AppContextType {
@@ -21,6 +23,8 @@ interface AppContextType {
   setUserTier: (tier: PartnerTierLevel) => void;
   currentTierInfo: PartnerTierInfo;
   products: Product[];
+  b2bContracts: FreelanceContract[];
+  leadSubmissions: LeadSubmission[];
   walletBalance: number;
   pendingEscrow: number;
   lifetimeEarnings: number;
@@ -39,14 +43,22 @@ interface AppContextType {
   setWithdrawModalOpen: (open: boolean) => void;
   merchantModalOpen: boolean;
   setMerchantModalOpen: (open: boolean) => void;
+  leadModalOpen: boolean;
+  setLeadModalOpen: (open: boolean) => void;
+  contractModalOpen: boolean;
+  setContractModalOpen: (open: boolean) => void;
+  selectedContractForModal: FreelanceContract | null;
+  setSelectedContractForModal: (contract: FreelanceContract | null) => void;
   notification: { message: string; type: 'success' | 'info' } | null;
   clearNotification: () => void;
   placeCustomerOrder: (
     productId: string,
     customerName: string,
     customerEmail: string,
-    paymentMethod: string
+    paymentMethod: string,
+    paymentReference?: string
   ) => CustomerOrder | null;
+  confirmOrderPayment: (orderId: string) => void;
   requestWithdrawal: (
     amount: number,
     method: string,
@@ -61,6 +73,8 @@ interface AppContextType {
     vendorEmail: string,
     fulfillmentUrl: string
   ) => void;
+  submitLeadInquiry: (lead: Omit<LeadSubmission, 'id' | 'date' | 'status'>) => void;
+  applyForContract: (contractId: string, applicantName: string, applicantEmail: string) => void;
   // Admin Methods for Website Owner
   addProduct: (newProd: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
@@ -68,6 +82,14 @@ interface AppContextType {
   approveMerchantSubmission: (submissionId: string) => void;
   approveWithdrawal: (withdrawalId: string) => void;
   updateOwnerSettings: (feeRate: number, payoutAccount: string) => void;
+  updateOwnerBanking: (
+    cbe: string,
+    telebirr: string,
+    usdt: string,
+    wise: string,
+    supportPhone: string,
+    supportTelegram: string
+  ) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -80,6 +102,7 @@ const INITIAL_ORDERS: CustomerOrder[] = [
     customerName: 'TechCorp Nordic AB',
     customerEmail: 'billing@techcorp-nordic.se',
     amount: 349.00,
+    currency: 'USD',
     paymentMethod: 'International Card (Stripe)',
     commissionEarned: 139.60,
     platformFeeEarned: 34.90,
@@ -95,6 +118,7 @@ const INITIAL_ORDERS: CustomerOrder[] = [
     customerName: 'Yonas Gebremedhin',
     customerEmail: 'yonas.g@gmail.com',
     amount: 289.00,
+    currency: 'USD',
     paymentMethod: 'CBE Birr / Telebirr',
     commissionEarned: 72.25,
     platformFeeEarned: 28.90,
@@ -110,6 +134,7 @@ const INITIAL_ORDERS: CustomerOrder[] = [
     customerName: 'Amina Al-Mansoor',
     customerEmail: 'amina.m@almansoor-trade.ae',
     amount: 149.00,
+    currency: 'USD',
     paymentMethod: 'Tether USDT (TRC-20)',
     commissionEarned: 67.05,
     platformFeeEarned: 14.90,
@@ -160,6 +185,33 @@ const INITIAL_SUBMISSIONS: MerchantProductSubmission[] = [
   }
 ];
 
+const INITIAL_LEADS: LeadSubmission[] = [
+  {
+    id: 'LEAD-8801',
+    fullName: 'Dr. Michael Hansen',
+    organization: 'Nordic Healthcare Logistics AG',
+    email: 'm.hansen@nordic-hl.de',
+    phone: '+49 176 8921 3490',
+    serviceNeeded: 'Enterprise AI Logistics Automation Suite',
+    estimatedBudget: '$15,000 - $30,000',
+    notes: 'Requires integration with European customs declarations and warehouse tracking.',
+    date: '2026-11-04',
+    status: 'contract_issued'
+  },
+  {
+    id: 'LEAD-8802',
+    fullName: 'Solomon Tadesse',
+    organization: 'Highland Specialty Coffee Exporters',
+    email: 'solomon@highlandcoffee-et.com',
+    phone: '+251 91 144 8921',
+    serviceNeeded: 'Global Commodity & Direct E-Commerce Export Setup',
+    estimatedBudget: '$8,000 - $12,000',
+    notes: 'Needs direct European buyer introduction, LC banking docs, and multi-currency billing.',
+    date: '2026-11-05',
+    status: 'new'
+  }
+];
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
     const saved = localStorage.getItem('nexus_lang');
@@ -178,6 +230,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('nexus_products_catalog');
     return saved ? JSON.parse(saved) : PRODUCTS_CATALOG;
+  });
+
+  // B2B Enterprise Contracts
+  const [b2bContracts, setB2bContracts] = useState<FreelanceContract[]>(() => {
+    const saved = localStorage.getItem('nexus_b2b_contracts');
+    return saved ? JSON.parse(saved) : ENTERPRISE_CONTRACTS;
+  });
+
+  // Enterprise Lead Inquiries
+  const [leadSubmissions, setLeadSubmissions] = useState<LeadSubmission[]>(() => {
+    const saved = localStorage.getItem('nexus_leads');
+    return saved ? JSON.parse(saved) : INITIAL_LEADS;
   });
 
   const [walletBalance, setWalletBalance] = useState<number>(() => {
@@ -224,7 +288,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalOwnerNetProfit: 5420.00, // 10% of $54,200 GMV
       totalGMV: 54200.00,
       totalAffiliatesPaid: 18920.00,
-      ownerPayoutAccount: 'CBE Account 100028472910 (Zebene Asfaw) / USDT: 0x98a...21'
+      ownerPayoutAccount: 'CBE: 100028472910 (Zebene Asfaw)',
+      cbeAccount: '100028472910',
+      telebirrPhone: '+251 91 123 4567',
+      usdtTrc20Address: 'TYDzsxdh6P6r34DksJkLmn89Qwerty1234',
+      wiseIban: 'BE89 3704 0044 0532 0130',
+      supportPhone: '+251 91 123 4567',
+      supportTelegram: '@ZebeneBusinessSupport'
     };
   });
 
@@ -233,12 +303,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedProductForAffiliate, setSelectedProductForAffiliate] = useState<Product | null>(null);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState<boolean>(false);
   const [merchantModalOpen, setMerchantModalOpen] = useState<boolean>(false);
+  const [leadModalOpen, setLeadModalOpen] = useState<boolean>(false);
+  const [contractModalOpen, setContractModalOpen] = useState<boolean>(false);
+  const [selectedContractForModal, setSelectedContractForModal] = useState<FreelanceContract | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
   // Sync state to localStorage
   useEffect(() => {
     localStorage.setItem('nexus_products_catalog', JSON.stringify(products));
   }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus_b2b_contracts', JSON.stringify(b2bContracts));
+  }, [b2bContracts]);
+
+  useEffect(() => {
+    localStorage.setItem('nexus_leads', JSON.stringify(leadSubmissions));
+  }, [leadSubmissions]);
 
   useEffect(() => {
     localStorage.setItem('nexus_wallet_bal', walletBalance.toString());
@@ -288,12 +369,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clearNotification = () => setNotification(null);
 
-  // Real Customer Purchase Execution (Generates commission for partner AND platform take-rate for the owner!)
+  // Real Customer Purchase Execution with Payment Reference tracking
   const placeCustomerOrder = (
     productId: string,
     customerName: string,
     customerEmail: string,
-    paymentMethod: string
+    paymentMethod: string,
+    paymentReference?: string
   ): CustomerOrder | null => {
     const product = products.find((p) => p.id === productId);
     if (!product) return null;
@@ -318,7 +400,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customerName,
       customerEmail,
       amount: product.price,
+      currency: 'USD',
       paymentMethod,
+      paymentReference: paymentReference || `TXN-${Math.floor(10000000 + Math.random() * 90000000)}`,
       commissionEarned,
       platformFeeEarned,
       affiliateRef: 'NEXUS-7849',
@@ -340,11 +424,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
 
     setNotification({
-      message: `${newOrder.customerName} ordered ${product.title}! +$${commissionEarned} partner commission settled. +$${platformFeeEarned} owner fee recorded.`,
+      message: `${newOrder.customerName} ordered ${product.title}! +$${commissionEarned} partner commission. +$${platformFeeEarned} owner fee recorded. Reference: ${newOrder.paymentReference}`,
       type: 'success'
     });
 
     return newOrder;
+  };
+
+  const confirmOrderPayment = (orderId: string) => {
+    setCustomerOrders((prev) =>
+      prev.map((o) => (o.orderId === orderId ? { ...o, status: 'delivered' } : o))
+    );
+    setNotification({
+      message: `Order ${orderId} confirmed and fulfillment dispatched.`,
+      type: 'success'
+    });
   };
 
   // Real Withdrawal Request
@@ -414,6 +508,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  // Submit Enterprise Client Lead Inquiry
+  const submitLeadInquiry = (lead: Omit<LeadSubmission, 'id' | 'date' | 'status'>) => {
+    const newLead: LeadSubmission = {
+      id: `LEAD-${Math.floor(1000 + Math.random() * 9000)}`,
+      date: new Date().toISOString().substring(0, 10),
+      status: 'new',
+      ...lead
+    };
+
+    setLeadSubmissions((prev) => [newLead, ...prev]);
+    setNotification({
+      message: `Enterprise request submitted! Our corporate solutions desk will contact you within 4 business hours.`,
+      type: 'success'
+    });
+  };
+
+  // Apply for B2B Contract / Freelance Mandate
+  const applyForContract = (contractId: string, applicantName: string, applicantEmail: string) => {
+    setB2bContracts((prev) =>
+      prev.map((c) =>
+        c.id === contractId ? { ...c, applicationsCount: c.applicationsCount + 1 } : c
+      )
+    );
+    setNotification({
+      message: `Proposal submitted for ${contractId} by ${applicantName} (${applicantEmail})! Vetted under escrow protocol.`,
+      type: 'success'
+    });
+  };
+
   // --- ADMIN / OWNER METHODS ---
 
   const addProduct = (newProd: Product) => {
@@ -444,7 +567,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const sub = merchantSubmissions.find((s) => s.id === submissionId);
     if (!sub) return;
 
-    // Convert approved submission into active product
     const approvedProduct: Product = {
       id: `prod-merchant-${Date.now()}`,
       title: sub.title,
@@ -508,6 +630,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
+  const updateOwnerBanking = (
+    cbe: string,
+    telebirr: string,
+    usdt: string,
+    wise: string,
+    supportPhone: string,
+    supportTelegram: string
+  ) => {
+    setOwnerStats((prev) => ({
+      ...prev,
+      cbeAccount: cbe,
+      telebirrPhone: telebirr,
+      usdtTrc20Address: usdt,
+      wiseIban: wise,
+      supportPhone,
+      supportTelegram
+    }));
+    setNotification({
+      message: `Owner payment receiving rails & support credentials updated! Customers will now pay directly to these accounts.`,
+      type: 'success'
+    });
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -519,6 +664,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUserTier,
         currentTierInfo,
         products,
+        b2bContracts,
+        leadSubmissions,
         walletBalance,
         pendingEscrow,
         lifetimeEarnings,
@@ -537,17 +684,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setWithdrawModalOpen,
         merchantModalOpen,
         setMerchantModalOpen,
+        leadModalOpen,
+        setLeadModalOpen,
+        contractModalOpen,
+        setContractModalOpen,
+        selectedContractForModal,
+        setSelectedContractForModal,
         notification,
         clearNotification,
         placeCustomerOrder,
+        confirmOrderPayment,
         requestWithdrawal,
         submitMerchantProduct,
+        submitLeadInquiry,
+        applyForContract,
         addProduct,
         updateProduct,
         toggleProductStatus,
         approveMerchantSubmission,
         approveWithdrawal,
-        updateOwnerSettings
+        updateOwnerSettings,
+        updateOwnerBanking
       }}
     >
       {children}

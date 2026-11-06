@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { PartnershipTiersSection } from './components/PartnershipTiersSection';
 import { MarketplaceSection } from './components/MarketplaceSection';
+import { B2BContractsSection } from './components/B2BContractsSection';
 import { EarningsCalculator } from './components/EarningsCalculator';
 import { DashboardSection } from './components/DashboardSection';
 import { TrustAndComplianceSection } from './components/TrustAndComplianceSection';
@@ -65,6 +66,7 @@ const AppContent: React.FC = () => {
       <main className="flex-1">
         <HeroSection onNavigate={handleNavigate} />
         <MarketplaceSection />
+        <B2BContractsSection />
         <PartnershipTiersSection />
         <EarningsCalculator />
         <DashboardSection />

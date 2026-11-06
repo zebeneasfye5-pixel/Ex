@@ -25,19 +25,30 @@ export const AdminConsole: React.FC = () => {
     setAdminConsoleOpen,
     ownerStats,
     updateOwnerSettings,
+    updateOwnerBanking,
     products,
     addProduct,
     toggleProductStatus,
     merchantSubmissions,
     approveMerchantSubmission,
     customerOrders,
+    confirmOrderPayment,
+    leadSubmissions,
     language
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'merchants' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'merchants' | 'leads' | 'settings'>('overview');
   const [feeRateInput, setFeeRateInput] = useState<string>(ownerStats.platformFeeRate.toString());
   const [ownerAccountInput, setOwnerAccountInput] = useState<string>(ownerStats.ownerPayoutAccount);
   
+  // Direct Banking & Payment Receiving Rails State
+  const [cbeInput, setCbeInput] = useState<string>(ownerStats.cbeAccount);
+  const [telebirrInput, setTelebirrInput] = useState<string>(ownerStats.telebirrPhone);
+  const [usdtInput, setUsdtInput] = useState<string>(ownerStats.usdtTrc20Address);
+  const [wiseInput, setWiseInput] = useState<string>(ownerStats.wiseIban);
+  const [supportPhoneInput, setSupportPhoneInput] = useState<string>(ownerStats.supportPhone);
+  const [supportTelegramInput, setSupportTelegramInput] = useState<string>(ownerStats.supportTelegram);
+
   // New Product Form State
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -52,8 +63,17 @@ export const AdminConsole: React.FC = () => {
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     const rate = parseFloat(feeRateInput);
-    if (isNaN(rate) || rate < 1 || rate > 30) return;
-    updateOwnerSettings(rate, ownerAccountInput);
+    if (!isNaN(rate) && rate >= 1 && rate <= 30) {
+      updateOwnerSettings(rate, ownerAccountInput);
+    }
+    updateOwnerBanking(
+      cbeInput,
+      telebirrInput,
+      usdtInput,
+      wiseInput,
+      supportPhoneInput,
+      supportTelegramInput
+    );
   };
 
   const handleCreateProduct = (e: React.FormEvent) => {
@@ -168,6 +188,19 @@ export const AdminConsole: React.FC = () => {
             </span>
           </button>
           <button
+            onClick={() => setActiveTab('leads')}
+            className={`px-3.5 py-2 rounded-lg font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === 'leads'
+                ? 'bg-amber-400 text-slate-950 font-semibold shadow-sm'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <span>{language === 'am' ? 'የድርጅቶች ጥያቄዎች & ውሎች' : 'Enterprise Leads & Contracts'}</span>
+            <span className="font-mono text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.2 rounded">
+              {leadSubmissions.length}
+            </span>
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
             className={`px-3.5 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'settings'
@@ -175,7 +208,7 @@ export const AdminConsole: React.FC = () => {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            {language === 'am' ? 'የመድረኩ መቶኛ ክፍያ ቅንብር' : 'Platform Fee & Payout Settings'}
+            {language === 'am' ? 'የክፍያ መቀበያ እና የባንክ ቅንብር' : 'Payment Rails & Payout Settings'}
           </button>
         </div>
 
@@ -270,10 +303,10 @@ export const AdminConsole: React.FC = () => {
                     {language === 'am' ? 'የገንዘብ መቀበያ አካውንት' : 'Owner Settlement Account'}
                   </span>
                   <div className="text-xs font-mono text-slate-200 truncate mt-1">
-                    {ownerStats.ownerPayoutAccount}
+                    CBE: {ownerStats.cbeAccount}
                   </div>
                   <span className="text-[10px] text-emerald-400 font-mono mt-2 block">
-                    CBE / Telebirr / USDT Configured
+                    Telebirr: {ownerStats.telebirrPhone}
                   </span>
                 </div>
 
@@ -283,10 +316,10 @@ export const AdminConsole: React.FC = () => {
               <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
                 <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                   <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                    {language === 'am' ? 'የቅርብ ጊዜ ግብይቶች እና የባለቤቱ የተቆረጠ ትርፍ' : 'Recent Transaction Revenue Waterfall'}
+                    {language === 'am' ? 'የቅርብ ጊዜ ግብይቶች፣ የክፍያ ማረጋገጫ ቁጥር እና የባለቤቱ የተቆረጠ ትርፍ' : 'Transaction Revenue & Verification Waterfall'}
                   </h4>
                   <span className="text-[11px] text-slate-400 font-mono">
-                    {customerOrders.length} Completed Orders
+                    {customerOrders.length} Orders
                   </span>
                 </div>
 
@@ -295,10 +328,12 @@ export const AdminConsole: React.FC = () => {
                     <thead className="bg-slate-900 border-b border-slate-800 text-slate-400">
                       <tr>
                         <th className="py-2.5 px-4">Order Ref / Customer</th>
+                        <th className="py-2.5 px-4">Payment Txn Ref</th>
                         <th className="py-2.5 px-4">Product Item</th>
                         <th className="py-2.5 px-4 font-mono">Total Paid</th>
                         <th className="py-2.5 px-4 font-mono">Affiliate Cut</th>
-                        <th className="py-2.5 px-4 font-mono text-emerald-400">Owner Net Fee ({ownerStats.platformFeeRate}%)</th>
+                        <th className="py-2.5 px-4 font-mono text-emerald-400">Owner Net ({ownerStats.platformFeeRate}%)</th>
+                        <th className="py-2.5 px-4 text-right">Verification</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -307,6 +342,10 @@ export const AdminConsole: React.FC = () => {
                           <td className="py-2.5 px-4 whitespace-nowrap">
                             <span className="font-semibold text-white block">{ord.orderId}</span>
                             <span className="text-[10px] text-slate-500 font-sans">{ord.customerName}</span>
+                          </td>
+                          <td className="py-2.5 px-4 whitespace-nowrap">
+                            <span className="text-amber-400 font-bold block">{ord.paymentReference || 'N/A'}</span>
+                            <span className="text-[10px] text-slate-400 font-sans truncate max-w-[150px] block">{ord.paymentMethod}</span>
                           </td>
                           <td className="py-2.5 px-4 font-sans max-w-xs truncate text-slate-200">
                             {ord.productTitle}
@@ -319,6 +358,20 @@ export const AdminConsole: React.FC = () => {
                           </td>
                           <td className="py-2.5 px-4 text-emerald-400 font-bold whitespace-nowrap">
                             +${ord.platformFeeEarned.toFixed(2)}
+                          </td>
+                          <td className="py-2.5 px-4 text-right font-sans whitespace-nowrap">
+                            {ord.status === 'delivered' ? (
+                              <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-mono">
+                                Verified & Sent
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => confirmOrderPayment(ord.orderId)}
+                                className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded transition-colors"
+                              >
+                                {language === 'am' ? 'አረጋግጥ' : 'Verify Txn'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -477,20 +530,77 @@ export const AdminConsole: React.FC = () => {
             </div>
           )}
 
-          {/* TAB 4: SETTINGS & OWNER PAYOUT */}
-          {activeTab === 'settings' && (
-            <form onSubmit={handleSaveSettings} className="space-y-4 max-w-lg text-xs">
+          {/* TAB 4: ENTERPRISE LEADS & CONTRACTS */}
+          {activeTab === 'leads' && (
+            <div className="space-y-4">
               <div>
-                <h4 className="text-sm font-bold text-white mb-1">
-                  {language === 'am' ? 'የመድረኩ ኮሚሽን እና የባለቤቱ የገንዘብ መቀበያ' : 'Platform Revenue & Owner Settlement Configuration'}
+                <h4 className="text-sm font-bold text-white">
+                  {language === 'am' ? 'የድርጅቶች እና የኮርፖሬት ደንበኞች ጥያቄዎች' : 'Corporate Enterprise Client Leads'}
                 </h4>
-                <p className="text-xs text-slate-400 mb-4">
+                <p className="text-xs text-slate-400">
                   {language === 'am'
-                    ? 'ከእያንዳንዱ ግብይት ላይ ድህረገፁ የሚቆርጠውን የትርፍ መቶኛ እና ገንዘብ የሚቀበሉበትን የባንክ ወይም የክሪፕቶ አድራሻ ያዘጋጁ።'
-                    : 'Configure your platform take-rate percentage and specify where your founder distributions are deposited.'}
+                    ? 'ትልልቅ ድርጅቶች እና ላኪዎች የሚያቀርቧቸው የB2B ውል ጥያቄዎች። በቀጥታ በስልክ ወይም በኢሜይል አግኝተዋቸው ውል ያዘጋጁላቸው።'
+                    : 'High-ticket contract and sourcing requests submitted by enterprise clients and trade companies.'}
                 </p>
               </div>
 
+              <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                <table className="w-full text-left text-xs text-slate-300 font-sans">
+                  <thead className="bg-slate-900 border-b border-slate-800 text-slate-400">
+                    <tr>
+                      <th className="py-3 px-4">Client / Organization</th>
+                      <th className="py-3 px-4">Service Needed</th>
+                      <th className="py-3 px-4 font-mono">Estimated Budget</th>
+                      <th className="py-3 px-4">Direct Contact</th>
+                      <th className="py-3 px-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 font-mono">
+                    {leadSubmissions.map((lead) => (
+                      <tr key={lead.id} className="hover:bg-slate-900/50">
+                        <td className="py-3 px-4 font-sans">
+                          <span className="font-semibold text-white block">{lead.fullName}</span>
+                          <span className="text-[10px] text-slate-400 block">{lead.organization}</span>
+                        </td>
+                        <td className="py-3 px-4 font-sans max-w-xs text-slate-200">
+                          <span className="font-medium text-amber-300 block">{lead.serviceNeeded}</span>
+                          <span className="text-[10px] text-slate-500 block truncate">{lead.notes}</span>
+                        </td>
+                        <td className="py-3 px-4 text-emerald-400 font-bold whitespace-nowrap">
+                          {lead.estimatedBudget}
+                        </td>
+                        <td className="py-3 px-4 font-sans whitespace-nowrap text-[11px]">
+                          <span className="text-slate-200 block">{lead.phone}</span>
+                          <span className="text-slate-500 block">{lead.email}</span>
+                        </td>
+                        <td className="py-3 px-4 font-sans whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800">
+                            {lead.status.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: SETTINGS & OWNER PAYOUT */}
+          {activeTab === 'settings' && (
+            <form onSubmit={handleSaveSettings} className="space-y-4 max-w-2xl text-xs">
+              <div>
+                <h4 className="text-sm font-bold text-white mb-1">
+                  {language === 'am' ? 'የክፍያ መቀበያ አካውንቶች እና የባለቤት ቅንብር' : 'Platform Payment Rails & Owner Configuration'}
+                </h4>
+                <p className="text-xs text-slate-400 mb-4">
+                  {language === 'am'
+                    ? 'ደንበኞች በቀጥታ የሚከፍሉበትን የእውነተኛ የCBE ባንክ ሂሳብ፣ ቴሌብር፣ USDT ዋሌት እና የቴሌግራም ድጋፍ መስመር እዚህ ያስተካክሉ።'
+                    : 'Configure the real accounts where customers send funds and where your platform take-rates accumulate.'}
+                </p>
+              </div>
+
+              {/* Platform Take Rate */}
               <div>
                 <label className="text-slate-300 font-medium block mb-1">
                   {language === 'am' ? 'የመድረክ ትርፍ መቶኛ (Platform Take-Rate %)' : 'Platform Commission Fee (% of Gross GMV)'}
@@ -511,26 +621,106 @@ export const AdminConsole: React.FC = () => {
                 </span>
               </div>
 
-              <div>
-                <label className="text-slate-300 font-medium block mb-1">
-                  {language === 'am' ? 'የባለቤቱ የገንዘብ መቀበያ (CBE / Telebirr / Wise / USDT)' : 'Owner Settlement Destination Account'}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={ownerAccountInput}
-                  onChange={(e) => setOwnerAccountInput(e.target.value)}
-                  placeholder="CBE Account, Telebirr Number, Wise IBAN or USDT Address"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
-                />
+              {/* CBE Account */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-medium block mb-1">
+                    Commercial Bank of Ethiopia (CBE) Account
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={cbeInput}
+                    onChange={(e) => setCbeInput(e.target.value)}
+                    placeholder="e.g. 100028472910"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                {/* Telebirr Number */}
+                <div>
+                  <label className="text-slate-300 font-medium block mb-1">
+                    Telebirr SuperApp / Merchant Phone
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={telebirrInput}
+                    onChange={(e) => setTelebirrInput(e.target.value)}
+                    placeholder="e.g. +251 91 123 4567"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              {/* USDT Address & Wise IBAN */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-medium block mb-1">
+                    Tether USDT (TRC-20) Wallet
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={usdtInput}
+                    onChange={(e) => setUsdtInput(e.target.value)}
+                    placeholder="e.g. TYDzsxdh6P6r34DksJkLmn89Qwerty1234"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-medium block mb-1">
+                    Wise International Wire (IBAN)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={wiseInput}
+                    onChange={(e) => setWiseInput(e.target.value)}
+                    placeholder="e.g. BE89 3704 0044 0532 0130"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              {/* Customer Support Phone & Telegram Handle */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 font-medium block mb-1">
+                    Official Support Phone / WhatsApp Line
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={supportPhoneInput}
+                    onChange={(e) => setSupportPhoneInput(e.target.value)}
+                    placeholder="e.g. +251 91 123 4567"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-300 font-medium block mb-1">
+                    Support Telegram Username
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={supportTelegramInput}
+                    onChange={(e) => setSupportTelegramInput(e.target.value)}
+                    placeholder="e.g. @ZebeneBusinessSupport"
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
+                  />
+                </div>
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg transition-colors"
+                  className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg transition-colors shadow-sm"
                 >
-                  {language === 'am' ? 'ቅንብሩን አስቀምጥ' : 'Save Owner Settings'}
+                  {language === 'am' ? 'የክፍያ እና የባንክ ቅንብሮችን አስቀምጥ' : 'Save Payment Rails & Owner Settings'}
                 </button>
               </div>
             </form>

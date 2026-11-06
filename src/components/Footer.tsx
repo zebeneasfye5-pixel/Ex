@@ -7,7 +7,7 @@ interface FooterProps {
 }
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
-  const { language, t, setAdminConsoleOpen } = useApp();
+  const { language, t, setAdminConsoleOpen, ownerStats } = useApp();
 
   return (
     <footer className="bg-slate-950 border-t border-slate-800 text-slate-400 text-xs">
@@ -81,6 +81,10 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <p className="text-slate-500 text-[11px] leading-relaxed">
               Disbursements executed via Commercial Bank of Ethiopia (CBE), Telebirr, Wise International Wire, Tether USDT (TRC-20), PayPal Business, and SWIFT.
             </p>
+            <div className="pt-2 text-[11px] text-amber-300/90 font-mono space-y-0.5">
+              <div>Direct Desk: <span className="text-white font-bold">{ownerStats.supportPhone}</span></div>
+              <div>Telegram: <span className="text-white font-bold">{ownerStats.supportTelegram}</span></div>
+            </div>
             <div className="pt-2 text-[10px] text-slate-500 font-mono leading-relaxed">
               {t.footerDisclaimer}
             </div>
